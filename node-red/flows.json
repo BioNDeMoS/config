@@ -95,9 +95,7 @@
             "d55e730c55d5ba53"
         ],
         "x": 674,
-        "y": 99,
-        "w": 232,
-        "h": 442
+        "y": 99
     },
     {
         "id": "df130a3d0ec7129e",
@@ -722,8 +720,8 @@
         "name": "Update Dashboard",
         "mode": "link",
         "links": [
-            "cabdf0d3a5aa73a3",
-            "8aaed64904e528f3"
+            "8aaed64904e528f3",
+            "cabdf0d3a5aa73a3"
         ],
         "x": 1215,
         "y": 140,
@@ -3246,9 +3244,9 @@
         "colorNormal": "#e01f4f",
         "colorOff": "#595959",
         "min": 0,
-        "max": "1000",
-        "segWarn": "450",
-        "segHigh": "500",
+        "max": "2000",
+        "segWarn": "0",
+        "segHigh": "0",
         "unit": "ppm",
         "layout": "sv",
         "channelA": "",
@@ -3269,7 +3267,7 @@
         "peakmode": false,
         "property": "payload",
         "peaktime": 3000,
-        "x": 580,
+        "x": 820,
         "y": 800,
         "wires": []
     },
@@ -3324,10 +3322,12 @@
         "y": 860,
         "wires": [
             [
-                "d7f54cd4447276b5"
+                "43fdb854c53decaf",
+                "39464788fa891632"
             ],
             [
-                "dc8bb5496e6882b8"
+                "43fdb854c53decaf",
+                "4d183db30f273c02"
             ],
             [
                 "bf30e6e111ba56bb"
@@ -3377,7 +3377,7 @@
         "colorNormal": "#e01f4f",
         "colorOff": "#595959",
         "min": 0,
-        "max": "1000",
+        "max": "2000",
         "segWarn": "450",
         "segHigh": "500",
         "unit": "ppm",
@@ -3400,7 +3400,7 @@
         "peakmode": false,
         "property": "payload",
         "peaktime": 3000,
-        "x": 580,
+        "x": 820,
         "y": 760,
         "wires": []
     },
@@ -3421,7 +3421,7 @@
         "max": "40",
         "colors": [
             "#e0b01f",
-            "#e01f4f",
+            "#1fe04d",
             "#e0b01f"
         ],
         "seg1": "20",
@@ -3874,6 +3874,90 @@
         "wires": []
     },
     {
+        "id": "a719fc1996dbe976",
+        "type": "ui_gauge",
+        "z": "8fd4d638fd5cb678",
+        "name": "",
+        "group": "f5d9c028c18b4c69",
+        "order": 7,
+        "width": "4",
+        "height": "3",
+        "gtype": "gage",
+        "title": "TDS correction",
+        "label": "ml per l",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "10",
+        "colors": [
+            "#1fe04d",
+            "#e0b01f",
+            "#e01f4f"
+        ],
+        "seg1": "0",
+        "seg2": "1",
+        "className": "",
+        "x": 840,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "43fdb854c53decaf",
+        "type": "function",
+        "z": "8fd4d638fd5cb678",
+        "name": "Calculate TDS correction",
+        "func": "var fog_tds = global.get(\"sensor-FogTDS\") || [];\nvar tank_tds = global.get(\"sensor-TankTDS\") || [];\nvar tank_tds_value = global.get(\"TankTDS_value\") || 0;\nvar min_tds_value = global.get(\"tds_min\") || 0;\nvar max_tds_value = global.get(\"tds_max\") || 0;\nif (fog_tds == [] || tank_tds == [] || tank_tds_value == 0 || min_tds_value == 0 || max_tds_value == 0){\n    return;\n}\nvar tds_diff_avg = 0;\nvar samples = 1000;\nvar effective_samples = 0;\nfor (var i = 1; i < samples; i++)\n{\n    if (tank_tds[fog_tds.length - i] != undefined && fog_tds[fog_tds.length - i] != undefined)\n    {\n        tds_diff_avg += tank_tds[fog_tds.length - i][\"y\"] - fog_tds[fog_tds.length - i][\"y\"];\n        effective_samples++;\n    }\n}\ntds_diff_avg /= effective_samples; \nvar ideal_fog_tds = (max_tds_value+min_tds_value)/2;\nvar ideal_tank_tds = ideal_fog_tds + tds_diff_avg;\nvar ppm_per_ml = 250;\nvar ml_per_l = (ideal_tank_tds-tank_tds_value)/ppm_per_ml;\nmsg.payload = Math.round(ml_per_l);\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 720,
+        "wires": [
+            [
+                "a719fc1996dbe976"
+            ]
+        ]
+    },
+    {
+        "id": "39464788fa891632",
+        "type": "function",
+        "z": "8fd4d638fd5cb678",
+        "name": "Set TDS min and max",
+        "func": "var fog_tds = global.get(\"sensor-FogTDS\") || [];\nvar tank_tds = global.get(\"sensor-TankTDS\") || [];\nif (fog_tds == [] || tank_tds == []) {\n    return;\n}\nvar tds_diff_avg = 0;\nvar samples = 100;\nvar effective_samples = 0;\nfor (var i = 1; i < samples; i++) {\n    if (tank_tds[fog_tds.length - i] != undefined && fog_tds[fog_tds.length - i] != undefined) {\n        tds_diff_avg += tank_tds[fog_tds.length - i][\"y\"] - fog_tds[fog_tds.length - i][\"y\"];\n        effective_samples++;\n    }\n}\ntds_diff_avg /= effective_samples; \nmsg.control  = {\n    seg1: global.get(\"tds_min\") + tds_diff_avg || 0,\n    seg2: global.get(\"tds_max\") + tds_diff_avg || 0,\n};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 760,
+        "wires": [
+            [
+                "d7f54cd4447276b5"
+            ]
+        ]
+    },
+    {
+        "id": "4d183db30f273c02",
+        "type": "function",
+        "z": "8fd4d638fd5cb678",
+        "name": "Set TDS min and max",
+        "func": "msg.control  = {\n    seg1: global.get(\"tds_min\") || 0,\n    seg2: global.get(\"tds_max\") || 0,\n};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 800,
+        "wires": [
+            [
+                "dc8bb5496e6882b8"
+            ]
+        ]
+    },
+    {
         "id": "99f938be9284c655",
         "type": "ui_time_scheduler",
         "z": "68704bb8b5631544",
@@ -3918,6 +4002,108 @@
         "x": 655,
         "y": 240,
         "wires": []
+    },
+    {
+        "id": "670109c745a9da50",
+        "type": "ui_text_input",
+        "z": "68704bb8b5631544",
+        "name": "TDS Min",
+        "label": "TDS Min",
+        "tooltip": "TDS Min",
+        "group": "2cd03f92eb7b05b6",
+        "order": 7,
+        "width": "4",
+        "height": "1",
+        "passthru": true,
+        "mode": "number",
+        "delay": 300,
+        "topic": "topic",
+        "sendOnBlur": true,
+        "className": "",
+        "topicType": "msg",
+        "x": 440,
+        "y": 320,
+        "wires": [
+            [
+                "2302be288b036a14"
+            ]
+        ]
+    },
+    {
+        "id": "f2a9c2a6d5438ad9",
+        "type": "ui_text_input",
+        "z": "68704bb8b5631544",
+        "name": "TDS Max",
+        "label": "TDS Max",
+        "tooltip": "TDS Max",
+        "group": "2cd03f92eb7b05b6",
+        "order": 7,
+        "width": "4",
+        "height": "1",
+        "passthru": true,
+        "mode": "number",
+        "delay": 300,
+        "topic": "topic",
+        "sendOnBlur": true,
+        "className": "",
+        "topicType": "msg",
+        "x": 440,
+        "y": 360,
+        "wires": [
+            [
+                "d8ebfc444cf7e46b"
+            ]
+        ]
+    },
+    {
+        "id": "2302be288b036a14",
+        "type": "change",
+        "z": "68704bb8b5631544",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "tds_min",
+                "pt": "global",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 630,
+        "y": 320,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "d8ebfc444cf7e46b",
+        "type": "change",
+        "z": "68704bb8b5631544",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "tds_max",
+                "pt": "global",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 630,
+        "y": 360,
+        "wires": [
+            []
+        ]
     },
     {
         "id": "a9ab0e655d75c937",
