@@ -1,9 +1,8 @@
 FROM nodered/node-red:3.0.2-14
 
+WORKDIR /data
+
 COPY package.json .
-RUN npm install --unsafe-perm --no-update-notifier --no-fund --only=production
+RUN npm install --unsafe-perm --no-update-notifier --no-fund --only=production --build-from-source
 
-#COPY settings.js /data/settings.js
-#COPY flows_cred.json /data/flows_cred.json
-#COPY flows.json /data/flows.json
-
+WORKDIR /usr/src/node-red

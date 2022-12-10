@@ -2,47 +2,30 @@ version: "3.9"
 
 services:
   node-red:
-    #image: nodered/node-red:latest
-    build:
-      context: node-red-docker/docker-custom
-      dockerfile: Dockerfile.debian
-      args:
-        - ARCH=arm64v8
-        - NODE_VERSION=14
-        - NODE_RED_VERSION=3.0.2
-        - OS=buster-slim
-        - TAG_SUFFIX=default 
+    build: ./node-red
     restart: always
     user: root
     environment:
       - TZ=Europe/Amsterdam
     ports:
       - 1880:1880
-    networks:
-      - node-red-net
     volumes:
-      - /config/node-red:/data
+      - /config/node-red/flows.json:/data/flows.json
+      - /config/node-red/settings.js:/data/settings.js
       - /data/node-red:/context
     devices:
       - /dev/ttyACM0
-      - /dev/video0
-  autossh:
-    image: jnovack/autossh
+#      - /dev/video0
+  ssh:
+    build: ./ssh
     restart: always
-    environment:
-      - SSH_REMOTE_USER=rpi
-      - STRICT_HOSTS_KEY_CHECKING=no
-      - SSH_REMOTE_HOST=140.238.173.125
-      - SSH_REMOTE_PORT=54545
-      - SSH_KEY_FILE=/id_ed25519
-      - SSH_MODE=-R
-      - SSH_BIND_IP=127.1.0.1
-      - SSH_TUNNEL_PORT=34968
-      - SSH_TARGET_HOST=node-red
-      - SSH_TARGET_PORT=1880
-    networks:
-      - node-red-net
+    command: |
+      -R 127.1.0.1:34968:node-red:1880
+      -o "ProxyCommand nc -X 5 -x tor:9050 %h %p"
+      rpi@biondemos.com
+      -p 54545
     volumes:
-      - /config/autossh/id_ed25519:/id_ed25519
-networks:
-  node-red-net:
+      - /config/autossh/id_ed25519:/id_ed25519:ro
+  tor:
+    build: ./tor
+    restart: always
